@@ -3,6 +3,7 @@ package task
 import (
 	"fmt"
 	"github.com/pkg/errors"
+	"runtime/debug"
 	"sync"
 )
 
@@ -68,7 +69,7 @@ func safeTask(t Task) Task {
 	return func(key string) (err error) {
 		defer func() {
 			if r := recover(); r != nil {
-				err = errors.Errorf("panic: %v", r)
+				err = errors.Errorf("panic: %v\nstack: %s", r, debug.Stack())
 			}
 		}()
 		return t(key)
