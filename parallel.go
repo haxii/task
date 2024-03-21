@@ -7,21 +7,21 @@ import (
 	"sync"
 )
 
-type ParallelTaskError map[string]error
+type ParallelTaskError[Key comparable] map[Key]error
 
-func (p ParallelTaskError) Error() string {
+func (p ParallelTaskError[Key]) Error() string {
 	msg := ""
 	for key, err := range p {
-		msg += fmt.Sprintf("%s: %s;", key, err)
+		msg += fmt.Sprintf("%v: %s;", key, err)
 	}
 	return msg
 }
 
 // Task 单个任务, 指定任务的 key, 执行失败返回对应的错误
-type Task func(key string) error
+type Task[Key comparable] func(key Key) error
 
 // Execute 执行一个并发任务，如果有错误则一定返回 ParallelTaskError
-func Execute(keys []string, thread int, task Task) error {
+func Execute[Key comparable](keys []Key, thread int, task Task[Key]) error {
 	// 输入检查
 	if len(keys) == 0 || task == nil || thread <= 0 {
 		return nil
@@ -31,9 +31,9 @@ func Execute(keys []string, thread int, task Task) error {
 	}
 	task = safeTask(task)
 	// 错误与 channel 的初始化
-	errs := make(ParallelTaskError)
+	errs := make(ParallelTaskError[Key])
 	errMu := sync.Mutex{}
-	keyChan := make(chan string, thread)
+	keyChan := make(chan Key, thread)
 
 	// key 生产者
 	go func() {
@@ -65,8 +65,8 @@ func Execute(keys []string, thread int, task Task) error {
 	return errs
 }
 
-func safeTask(t Task) Task {
-	return func(key string) (err error) {
+func safeTask[Key comparable](t Task[Key]) Task[Key] {
+	return func(key Key) (err error) {
 		defer func() {
 			if r := recover(); r != nil {
 				err = errors.Errorf("panic: %v\nstack: %s", r, debug.Stack())
