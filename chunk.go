@@ -1,13 +1,19 @@
 package task
 
 func ExecuteChunk[T any](arr []T, size, thread int, handler func([]T) error) error {
+	return ParallelExecuteChunk(arr, size, thread, func(i int, ts []T) error {
+		return handler(ts)
+	})
+}
+
+func ParallelExecuteChunk[T any](arr []T, size, thread int, handler func(int, []T) error) error {
 	chunked := chunk(arr, size)
 	keyList := make([]int, 0)
 	for i := range chunked {
 		keyList = append(keyList, i)
 	}
-	return Execute(keyList, thread, func(key int) error {
-		return handler(chunked[key])
+	return ParallelExecute(keyList, thread, func(id, key int) error {
+		return handler(id, chunked[key])
 	})
 }
 
